@@ -143,8 +143,7 @@ function displayGroceryList(groceryList) {
         
         // Toggle checked state on click
         itemDiv.addEventListener('click', () => {
-            itemDiv.style.opacity = itemDiv.style.opacity === '0.5' ? '1' : '0.5';
-            itemDiv.style.textDecoration = itemDiv.style.textDecoration === 'line-through' ? 'none' : 'line-through';
+            itemDiv.classList.toggle('checked');
         });
 
         groceryListElement.appendChild(itemDiv);
