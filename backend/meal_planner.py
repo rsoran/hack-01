@@ -27,7 +27,7 @@ class MealPlanner:
         Args:
             day_description: Description of the user's day (e.g., "Busy work day, need quick meals")
             preferences: List of dietary preferences/restrictions
-            budget: Budget for meals in dollars
+            budget: Budget for meals in rupees
         
         Returns:
             Dictionary with meals, grocery list, substitutions, and budget analysis
@@ -53,7 +53,7 @@ class MealPlanner:
 
 User's Day: {day_description}
 Dietary Preferences: {', '.join(preferences) if preferences else 'No specific preferences'}
-Budget: ${budget if budget else 'No specific budget'} for the day
+Budget: ₹{budget if budget else 'No specific budget'} for the day
 
 Please provide a response in the following JSON format:
 {{
@@ -76,7 +76,7 @@ Please provide a response in the following JSON format:
         "prep_time_minutes": 30
     }},
     "grocery_list": ["item1", "item2"],
-    "estimated_cost": 25.50,
+    "estimated_cost": 500.00,
     "substitutions": [
         {{"original": "item", "substitute": "alternative", "reason": "explanation"}}
     ],
@@ -125,7 +125,7 @@ Provide ONLY the JSON response, no additional text."""
                 "chicken breast", "mixed greens", "tomato", "cucumber", "olive oil",
                 "pasta", "tomato sauce", "garlic", "parmesan cheese", "basil"
             ],
-            "estimated_cost": 28.50,
+            "estimated_cost": 500.00,
             "substitutions": [
                 {
                     "original": "chicken breast",

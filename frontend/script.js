@@ -1,5 +1,5 @@
 // Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE_URL = '';
 
 // DOM Elements
 const mealPlanForm = document.getElementById('mealPlanForm');
@@ -153,7 +153,7 @@ function displayBudgetInfo(mealPlan) {
         '<span style="color: var(--warning-color);">⚠ May Exceed Budget</span>';
 
     budgetInfo.innerHTML = `
-        <p><strong>Estimated Cost:</strong> $${estimatedCost}</p>
+        <p><strong>Estimated Cost:</strong> ₹${estimatedCost}</p>
         <p><strong>Budget Feasible:</strong> ${feasibilityText}</p>
     `;
 }

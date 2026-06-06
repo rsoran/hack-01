@@ -104,7 +104,7 @@ def get_example_meal_plan():
             "prep_time_minutes": 25
         },
         "grocery_list": ["oats", "berries", "milk", "honey", "chicken breast", "mixed greens", "tomato", "cucumber", "pasta", "tomato sauce", "garlic", "parmesan"],
-        "estimated_cost": 28.50,
+        "estimated_cost": 500.00,
         "budget_feasible": True
     }
     return jsonify(example), 200
