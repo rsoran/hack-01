@@ -2,221 +2,223 @@
 const API_BASE_URL = '';
 
 // DOM Elements
-const mealPlanForm = document.getElementById('mealPlanForm');
+const wellbeingForm = document.getElementById('wellbeingForm');
 const loadingSpinner = document.getElementById('loadingSpinner');
 const resultsSection = document.getElementById('resultsSection');
 const errorSection = document.getElementById('errorSection');
-const formSection = document.querySelector('.form-section');
+const formSection = document.getElementById('formSection');
+
+// Results elements
+const empathyText = document.getElementById('empathyText');
+const insightsText = document.getElementById('insightsText');
+const copingList = document.getElementById('copingList');
+const hobbyText = document.getElementById('hobbyText');
+const affirmationText = document.getElementById('affirmationText');
+const actionList = document.getElementById('actionList');
+
+// Breathing Helper Elements
+const btnBreathe = document.getElementById('btnBreathe');
+const btnResetBreathe = document.getElementById('btnResetBreathe');
+const breathingCircle = document.getElementById('breathingCircle');
+const breathingText = document.getElementById('breathingText');
+
+// Breathing Timer State
+let breathingInterval = null;
+let breathingTick = 0; // 0 to 15 seconds box cycle
+
+// Global storage for download
+window.currentAdvicePlan = null;
+
+// Student Motivational Quotes
+const MOTIVATIONAL_QUOTES = [
+    "This exam is just a single chapter in your life, not the whole book. Keep going!",
+    "Your value is not measured in marks. Breathe, do your best, and let go of the rest.",
+    "Competitive exams are tests of your preparation, not of your capability or your future.",
+    "Success is the sum of small efforts, repeated day in and day out.",
+    "You have conquered difficult days before. You can and will get through this.",
+    "One mock test score cannot determine your potential. It's simply a tool to help you grow.",
+    "Trust your hard work. You are much stronger and more resilient than you think.",
+    "Breathe. You don't have to figure out everything today. Just take the next small step.",
+    "No matter the results, you will find a path to succeed. Believe in your journey.",
+    "Rest is a part of your preparation, not a distraction. Give yourself permission to pause."
+];
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
-    mealPlanForm.addEventListener('submit', handleFormSubmit);
+    // Select a random quote
+    const quoteEl = document.getElementById('motivationQuote');
+    if (quoteEl) {
+        const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+        quoteEl.textContent = randomQuote;
+    }
+
+    wellbeingForm.addEventListener('submit', handleFormSubmit);
+    btnBreathe.addEventListener('click', toggleBreathing);
+    btnResetBreathe.addEventListener('click', resetBreathing);
 });
 
 /**
- * Handle form submission
+ * Handle Wellbeing form submit
  */
 async function handleFormSubmit(e) {
     e.preventDefault();
 
-    // Get form data
-    const dayDescription = document.getElementById('dayDescription').value.trim();
-    const preferences = Array.from(document.querySelectorAll('input[name="preferences"]:checked'))
-        .map(checkbox => checkbox.value);
-    const budget = document.getElementById('budget').value ? parseFloat(document.getElementById('budget').value) : null;
+    // Get input values
+    const moodEl = document.querySelector('input[name="mood"]:checked');
+    const mood = moodEl ? moodEl.value : null;
+    const exam = document.getElementById('examSelect').value;
+    const triggers = Array.from(document.querySelectorAll('input[name="triggers"]:checked'))
+        .map(el => el.value);
+    const hobbies = Array.from(document.querySelectorAll('input[name="hobbies"]:checked'))
+        .map(el => el.value);
+    const journal = document.getElementById('journalInput').value.trim();
 
-    // Validate
-    if (!dayDescription) {
-        showError('Please describe your day');
+    // Basic Validation
+    if (!mood || !exam) {
+        alert('Please select your mood and the exam you are preparing for.');
         return;
     }
 
-    // Show loading, hide others
     showLoading();
 
     try {
-        // Call API
-        const response = await fetch(`${API_BASE_URL}/api/generate-meal-plan`, {
+        // Send request to Vercel Serverless Function
+        const response = await fetch(`${API_BASE_URL}/api/analyze-wellbeing`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                day_description: dayDescription,
-                preferences: preferences,
-                budget: budget
-            })
+            body: JSON.stringify({ mood, exam, triggers, hobbies, journal })
         });
 
         if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
+            throw new Error(`Server returned code ${response.status}`);
         }
 
-        const mealPlan = await response.json();
+        const advicePlan = await response.json();
+        
+        // Cache for download
+        window.currentAdvicePlan = advicePlan;
 
-        // Display results
-        displayMealPlan(mealPlan);
+        // Populate and display results
+        displayAdvicePlan(advicePlan);
         showResults();
     } catch (error) {
-        console.error('Error:', error);
-        showError('Failed to generate meal plan. Please try again.');
+        console.error('Error fetching wellness plan:', error);
+        showError('Could not retrieve your wellbeing plan right now. Please try again.');
     }
 }
 
 /**
- * Display meal plan data
+ * Display the AI advice details in the UI
  */
-function displayMealPlan(mealPlan) {
-    // Breakfast
-    displayMeal('breakfastContent', mealPlan.breakfast);
+function displayAdvicePlan(plan) {
+    // 1. Empathy Statement
+    empathyText.textContent = plan.empathy_statement || '';
 
-    // Lunch
-    displayMeal('lunchContent', mealPlan.lunch);
+    // 2. Insights
+    insightsText.textContent = plan.insights || '';
 
-    // Dinner
-    displayMeal('dinnerContent', mealPlan.dinner);
-
-    // Grocery List
-    displayGroceryList(mealPlan.grocery_list);
-
-    // Budget Info
-    displayBudgetInfo(mealPlan);
-
-    // Substitutions
-    displaySubstitutions(mealPlan.substitutions);
-
-    // Notes
-    if (mealPlan.notes) {
-        displayNotes(mealPlan.notes);
-    }
-
-    // Store current plan for export
-    window.currentMealPlan = mealPlan;
-}
-
-/**
- * Display a single meal
- */
-function displayMeal(elementId, meal) {
-    const content = document.getElementById(elementId);
-    
-    let html = `
-        <div class="meal-details">
-            <p><strong>Meal:</strong> ${meal.meal}</p>
-            <p><strong>Time:</strong> ${meal.time}</p>
-            <p><strong>Prep Time:</strong> ${meal.prep_time_minutes} minutes</p>
-            <p><strong>Ingredients:</strong></p>
-            <div class="ingredients-list">
-    `;
-
-    meal.ingredients.forEach(ingredient => {
-        html += `<span class="ingredient-tag">${ingredient}</span>`;
+    // 3. Coping Strategies
+    copingList.innerHTML = '';
+    const strategies = plan.coping_strategies || [];
+    strategies.forEach(strategy => {
+        const li = document.createElement('li');
+        li.textContent = strategy;
+        copingList.appendChild(li);
     });
 
-    html += `</div></div>`;
-    content.innerHTML = html;
-}
+    // 4. Hobby Integration
+    hobbyText.textContent = plan.hobby_integration || 'Remember to take breaks to do things you love.';
 
-/**
- * Display grocery list
- */
-function displayGroceryList(groceryList) {
-    const groceryListElement = document.getElementById('groceryList');
-    groceryListElement.innerHTML = '';
+    // 5. Custom Affirmation
+    affirmationText.textContent = plan.custom_affirmation ? `“ ${plan.custom_affirmation} ”` : '';
 
-    groceryList.forEach(item => {
+    // 6. Action Items
+    actionList.innerHTML = '';
+    const actions = plan.suggested_actions || ['Practice breathing exercises', 'Take a 10 min break'];
+    actions.forEach(action => {
         const itemDiv = document.createElement('div');
-        itemDiv.className = 'grocery-item';
-        
-        let displayStr = '';
-        if (item && typeof item === 'object') {
-            const name = item.item || '';
-            const qty = item.quantity ? ` (${item.quantity})` : '';
-            const cost = item.estimated_cost ? ` - ₹${item.estimated_cost}` : '';
-            displayStr = `${name}${qty}${cost}`;
-        } else {
-            displayStr = item;
-        }
-        
-        itemDiv.textContent = displayStr;
-        itemDiv.style.cursor = 'pointer';
-        
-        // Toggle checked state on click
-        itemDiv.addEventListener('click', () => {
-            itemDiv.classList.toggle('checked');
-        });
-
-        groceryListElement.appendChild(itemDiv);
+        itemDiv.className = 'action-item';
+        itemDiv.textContent = action;
+        actionList.appendChild(itemDiv);
     });
 }
 
 /**
- * Display budget information
+ * Box Breathing logic (16s cycle: 4s inhale, 4s hold, 4s exhale, 4s hold)
  */
-function displayBudgetInfo(mealPlan) {
-    const budgetInfo = document.getElementById('budgetInfo');
-    
-    const estimatedCost = mealPlan.estimated_cost || 'Not available';
-    const isFeasible = mealPlan.budget_feasible;
-    const feasibilityText = isFeasible ? 
-        '<span style="color: var(--success-color);">✓ Within Budget</span>' : 
-        '<span style="color: var(--warning-color);">⚠ May Exceed Budget</span>';
-
-    budgetInfo.innerHTML = `
-        <p><strong>Estimated Cost:</strong> ₹${estimatedCost}</p>
-        <p><strong>Budget Feasible:</strong> ${feasibilityText}</p>
-    `;
-}
-
-/**
- * Display substitutions
- */
-function displaySubstitutions(substitutions) {
-    const substitutionsDiv = document.getElementById('substitutions');
-    substitutionsDiv.innerHTML = '';
-
-    if (!substitutions || substitutions.length === 0) {
-        substitutionsDiv.innerHTML = '<p>No substitutions suggested</p>';
-        return;
+function toggleBreathing() {
+    if (breathingInterval) {
+        pauseBreathing();
+    } else {
+        startBreathing();
     }
+}
 
-    substitutions.forEach(sub => {
-        const subDiv = document.createElement('div');
-        subDiv.className = 'substitution-item';
-        subDiv.innerHTML = `
-            <p><strong>Original:</strong> <span class="original">${sub.original}</span></p>
-            <p><strong>Substitute:</strong> <span class="substitute">${sub.substitute}</span></p>
-            <p><strong>Reason:</strong> ${sub.reason}</p>
-        `;
-        substitutionsDiv.appendChild(subDiv);
-    });
+function startBreathing() {
+    btnBreathe.textContent = 'Pause Cycle';
+    btnResetBreathe.classList.remove('hidden');
+    
+    // Immediate execution of first tick
+    runBreathingTick();
+    
+    breathingInterval = setInterval(() => {
+        breathingTick = (breathingTick + 1) % 16;
+        runBreathingTick();
+    }, 1000);
+}
+
+function runBreathingTick() {
+    // Reset classes
+    breathingCircle.className = 'breathing-circle';
+    
+    if (breathingTick < 4) {
+        // Inhale phase
+        breathingCircle.classList.add('inhale');
+        breathingText.textContent = `Inhale... ${4 - breathingTick}s`;
+    } else if (breathingTick < 8) {
+        // Hold phase (inhaled)
+        breathingCircle.classList.add('hold-inhale');
+        breathingText.textContent = `Hold... ${8 - breathingTick}s`;
+    } else if (breathingTick < 12) {
+        // Exhale phase
+        breathingCircle.classList.add('exhale');
+        breathingText.textContent = `Exhale... ${12 - breathingTick}s`;
+    } else {
+        // Hold phase (exhaled)
+        breathingCircle.classList.add('hold-exhale');
+        breathingText.textContent = `Hold... ${16 - breathingTick}s`;
+    }
+}
+
+function pauseBreathing() {
+    clearInterval(breathingInterval);
+    breathingInterval = null;
+    btnBreathe.textContent = 'Resume Breathing';
+}
+
+function resetBreathing() {
+    clearInterval(breathingInterval);
+    breathingInterval = null;
+    breathingTick = 0;
+    
+    breathingCircle.className = 'breathing-circle';
+    breathingText.textContent = 'Ready';
+    btnBreathe.textContent = 'Start Breathing';
+    btnResetBreathe.classList.add('hidden');
 }
 
 /**
- * Display notes
- */
-function displayNotes(notes) {
-    const notesSection = document.getElementById('notesSection');
-    notesSection.innerHTML = `
-        <h4>💡 Notes</h4>
-        <p>${notes}</p>
-    `;
-    notesSection.classList.remove('hidden');
-}
-
-/**
- * Show loading state
+ * UI visual states management
  */
 function showLoading() {
-    formSection.style.display = 'none';
+    formSection.classList.add('hidden');
     loadingSpinner.classList.remove('hidden');
     resultsSection.classList.add('hidden');
     errorSection.classList.add('hidden');
 }
 
-/**
- * Show results
- */
 function showResults() {
     loadingSpinner.classList.add('hidden');
     resultsSection.classList.remove('hidden');
@@ -224,53 +226,54 @@ function showResults() {
     resultsSection.scrollIntoView({ behavior: 'smooth' });
 }
 
-/**
- * Show error
- */
-function showError(message) {
+function showError(msg) {
     loadingSpinner.classList.add('hidden');
     resultsSection.classList.add('hidden');
     errorSection.classList.remove('hidden');
-    document.getElementById('errorMessage').textContent = message;
-    formSection.style.display = 'block';
+    document.getElementById('errorMessage').textContent = msg;
 }
 
-/**
- * Reset form and go back to input
- */
 function resetForm() {
-    mealPlanForm.reset();
-    formSection.style.display = 'block';
+    wellbeingForm.reset();
+    formSection.classList.remove('hidden');
     loadingSpinner.classList.add('hidden');
     resultsSection.classList.add('hidden');
     errorSection.classList.add('hidden');
-    window.currentMealPlan = null;
+    window.currentAdvicePlan = null;
     formSection.scrollIntoView({ behavior: 'smooth' });
 }
 
 /**
- * Print meal plan
+ * Export advice plan as a formatted text file
  */
-function printMealPlan() {
-    window.print();
-}
-
-/**
- * Download meal plan as JSON
- */
-function downloadMealPlan() {
-    if (!window.currentMealPlan) {
-        alert('No meal plan to download');
+function downloadAdvice() {
+    if (!window.currentAdvicePlan) {
+        alert('No wellness plan found to download.');
         return;
     }
 
-    const dataStr = JSON.stringify(window.currentMealPlan, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `meal-plan-${new Date().toISOString().split('T')[0]}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+    const plan = window.currentAdvicePlan;
+    let text = `=========================================\n`;
+    text += `🌱 MINDEASE WELL-BEING ACTION PLAN\n`;
+    text += `=========================================\n\n`;
+    text += `MESSAGE FOR YOU:\n${plan.empathy_statement}\n\n`;
+    text += `INSIGHT:\n${plan.insights}\n\n`;
+    text += `COPING STRATEGIES:\n`;
+    (plan.coping_strategies || []).forEach((s, idx) => {
+        text += `${idx + 1}. ${s}\n`;
+    });
+    text += `\nHOBBY-BASED RECOVERY:\n${plan.hobby_integration}\n\n`;
+    text += `YOUR DAILY AFFIRMATION:\n"${plan.custom_affirmation}"\n\n`;
+    text += `RECOMMENDED SELF-CARE ACTIONS:\n`;
+    (plan.suggested_actions || []).forEach(a => {
+        text += `- ${a}\n`;
+    });
+    text += `\n=========================================\n`;
+    text += `Take it one breath at a time. You can do this!\n`;
+
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `mindease-wellness-plan-${new Date().toISOString().split('T')[0]}.txt`;
+    link.click();
 }
