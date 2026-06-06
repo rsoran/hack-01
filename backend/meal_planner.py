@@ -106,7 +106,57 @@ Provide ONLY the JSON response, no additional text."""
     
     def _generate_fallback_plan(self, day_description, preferences, budget):
         """Generate a fallback meal plan when AI is unavailable"""
+        # Default base cost
         estimated_cost = 400.00
+        
+        # Scale estimated cost dynamically if a budget is provided
+        if budget is not None:
+            try:
+                target_budget = float(budget)
+                if target_budget > 0:
+                    # Set estimated cost to be 90% of budget, capped at 400
+                    estimated_cost = min(target_budget * 0.9, 400.00)
+                    if estimated_cost < 20.00:
+                        estimated_cost = target_budget
+            except ValueError:
+                pass
+
+        # Base grocery list items with relative weight factors for scaling
+        base_items = [
+            {"item": "Oats", "quantity": "100g", "weight": 20},
+            {"item": "Berries", "quantity": "50g", "weight": 50},
+            {"item": "Milk", "quantity": "500ml", "weight": 30},
+            {"item": "Honey", "quantity": "2 tbsp", "weight": 15},
+            {"item": "Chicken breast", "quantity": "250g", "weight": 100},
+            {"item": "Mixed greens", "quantity": "100g", "weight": 30},
+            {"item": "Tomato", "quantity": "2 units", "weight": 10},
+            {"item": "Cucumber", "quantity": "1 unit", "weight": 10},
+            {"item": "Olive oil", "quantity": "3 tbsp", "weight": 15},
+            {"item": "Pasta", "quantity": "200g", "weight": 40},
+            {"item": "Tomato sauce", "quantity": "1 cup", "weight": 30},
+            {"item": "Garlic", "quantity": "3 cloves", "weight": 5},
+            {"item": "Parmesan cheese", "quantity": "50g", "weight": 40},
+            {"item": "Basil", "quantity": "a few leaves", "weight": 5}
+        ]
+        
+        total_weight = sum(item["weight"] for item in base_items)
+        
+        # Scale each item's cost proportionally to match estimated_cost
+        grocery_list = []
+        for item in base_items:
+            item_cost = round((item["weight"] / total_weight) * estimated_cost, 2)
+            grocery_list.append({
+                "item": item["item"],
+                "quantity": item["quantity"],
+                "estimated_cost": item_cost
+            })
+            
+        # Adjust potential rounding difference on the last item to make sum exactly match estimated_cost
+        calculated_sum = sum(item["estimated_cost"] for item in grocery_list)
+        diff = round(estimated_cost - calculated_sum, 2)
+        if diff != 0 and grocery_list:
+            grocery_list[-1]["estimated_cost"] = round(grocery_list[-1]["estimated_cost"] + diff, 2)
+
         is_feasible = True
         if budget is not None:
             try:
@@ -133,23 +183,8 @@ Provide ONLY the JSON response, no additional text."""
                 "ingredients": ["pasta", "tomato sauce", "garlic", "parmesan cheese", "basil"],
                 "prep_time_minutes": 25
             },
-            "grocery_list": [
-                {"item": "Oats", "quantity": "100g", "estimated_cost": 20.00},
-                {"item": "Berries", "quantity": "50g", "estimated_cost": 50.00},
-                {"item": "Milk", "quantity": "500ml", "estimated_cost": 30.00},
-                {"item": "Honey", "quantity": "2 tbsp", "estimated_cost": 15.00},
-                {"item": "Chicken breast", "quantity": "250g", "estimated_cost": 100.00},
-                {"item": "Mixed greens", "quantity": "100g", "estimated_cost": 30.00},
-                {"item": "Tomato", "quantity": "2 units", "estimated_cost": 10.00},
-                {"item": "Cucumber", "quantity": "1 unit", "estimated_cost": 10.00},
-                {"item": "Olive oil", "quantity": "3 tbsp", "estimated_cost": 15.00},
-                {"item": "Pasta", "quantity": "200g", "estimated_cost": 40.00},
-                {"item": "Tomato sauce", "quantity": "1 cup", "estimated_cost": 30.00},
-                {"item": "Garlic", "quantity": "3 cloves", "estimated_cost": 5.00},
-                {"item": "Parmesan cheese", "quantity": "50g", "estimated_cost": 40.00},
-                {"item": "Basil", "quantity": "a few leaves", "estimated_cost": 5.00}
-            ],
-            "estimated_cost": estimated_cost,
+            "grocery_list": grocery_list,
+            "estimated_cost": round(estimated_cost, 2),
             "substitutions": [
                 {
                     "original": "chicken breast",
