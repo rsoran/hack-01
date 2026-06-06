@@ -16,7 +16,7 @@ class MealPlanner:
         self.api_key = os.getenv('GOOGLE_API_KEY')
         if self.api_key and genai:
             genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-pro')
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
         else:
             self.model = None
     
@@ -75,14 +75,19 @@ Please provide a response in the following JSON format:
         "ingredients": ["ingredient1", "ingredient2"],
         "prep_time_minutes": 30
     }},
-    "grocery_list": ["item1", "item2"],
-    "estimated_cost": 500.00,
+    "grocery_list": [
+        {{"item": "onion", "quantity": "100g", "estimated_cost": 10.00}},
+        {{"item": "milk", "quantity": "1 packet", "estimated_cost": 30.00}}
+    ],
+    "estimated_cost": 40.00,
     "substitutions": [
         {{"original": "item", "substitute": "alternative", "reason": "explanation"}}
     ],
     "budget_feasible": true,
     "notes": "any additional notes"
 }}
+
+Important: All estimated costs must be in Rupees (₹). Ensure that every item in the grocery list is an object containing 'item', 'quantity', and 'estimated_cost' in Rupees, and that the sum of these estimated costs matches the overall 'estimated_cost'. If the budget is specified, do your best to design a meal plan where the overall estimated_cost is within the budget.
 
 Provide ONLY the JSON response, no additional text."""
         return prompt
@@ -101,6 +106,14 @@ Provide ONLY the JSON response, no additional text."""
     
     def _generate_fallback_plan(self, day_description, preferences, budget):
         """Generate a fallback meal plan when AI is unavailable"""
+        estimated_cost = 400.00
+        is_feasible = True
+        if budget is not None:
+            try:
+                is_feasible = float(budget) >= estimated_cost
+            except ValueError:
+                pass
+
         return {
             "breakfast": {
                 "meal": "Oatmeal with Berries",
@@ -121,11 +134,22 @@ Provide ONLY the JSON response, no additional text."""
                 "prep_time_minutes": 25
             },
             "grocery_list": [
-                "oats", "berries", "milk", "honey",
-                "chicken breast", "mixed greens", "tomato", "cucumber", "olive oil",
-                "pasta", "tomato sauce", "garlic", "parmesan cheese", "basil"
+                {"item": "Oats", "quantity": "100g", "estimated_cost": 20.00},
+                {"item": "Berries", "quantity": "50g", "estimated_cost": 50.00},
+                {"item": "Milk", "quantity": "500ml", "estimated_cost": 30.00},
+                {"item": "Honey", "quantity": "2 tbsp", "estimated_cost": 15.00},
+                {"item": "Chicken breast", "quantity": "250g", "estimated_cost": 100.00},
+                {"item": "Mixed greens", "quantity": "100g", "estimated_cost": 30.00},
+                {"item": "Tomato", "quantity": "2 units", "estimated_cost": 10.00},
+                {"item": "Cucumber", "quantity": "1 unit", "estimated_cost": 10.00},
+                {"item": "Olive oil", "quantity": "3 tbsp", "estimated_cost": 15.00},
+                {"item": "Pasta", "quantity": "200g", "estimated_cost": 40.00},
+                {"item": "Tomato sauce", "quantity": "1 cup", "estimated_cost": 30.00},
+                {"item": "Garlic", "quantity": "3 cloves", "estimated_cost": 5.00},
+                {"item": "Parmesan cheese", "quantity": "50g", "estimated_cost": 40.00},
+                {"item": "Basil", "quantity": "a few leaves", "estimated_cost": 5.00}
             ],
-            "estimated_cost": 500.00,
+            "estimated_cost": estimated_cost,
             "substitutions": [
                 {
                     "original": "chicken breast",
@@ -138,6 +162,6 @@ Provide ONLY the JSON response, no additional text."""
                     "reason": "gluten-free option"
                 }
             ],
-            "budget_feasible": True,
+            "budget_feasible": is_feasible,
             "notes": "All meals can be prepared at home for better cost efficiency"
         }

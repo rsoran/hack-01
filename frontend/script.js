@@ -127,7 +127,18 @@ function displayGroceryList(groceryList) {
     groceryList.forEach(item => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'grocery-item';
-        itemDiv.textContent = item;
+        
+        let displayStr = '';
+        if (item && typeof item === 'object') {
+            const name = item.item || '';
+            const qty = item.quantity ? ` (${item.quantity})` : '';
+            const cost = item.estimated_cost ? ` - ₹${item.estimated_cost}` : '';
+            displayStr = `${name}${qty}${cost}`;
+        } else {
+            displayStr = item;
+        }
+        
+        itemDiv.textContent = displayStr;
         itemDiv.style.cursor = 'pointer';
         
         // Toggle checked state on click

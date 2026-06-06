@@ -103,8 +103,21 @@ def get_example_meal_plan():
             "ingredients": ["pasta", "tomato sauce", "garlic", "parmesan"],
             "prep_time_minutes": 25
         },
-        "grocery_list": ["oats", "berries", "milk", "honey", "chicken breast", "mixed greens", "tomato", "cucumber", "pasta", "tomato sauce", "garlic", "parmesan"],
-        "estimated_cost": 500.00,
+        "grocery_list": [
+            {"item": "Oats", "quantity": "100g", "estimated_cost": 20.00},
+            {"item": "Berries", "quantity": "50g", "estimated_cost": 50.00},
+            {"item": "Milk", "quantity": "500ml", "estimated_cost": 30.00},
+            {"item": "Honey", "quantity": "2 tbsp", "estimated_cost": 15.00},
+            {"item": "Chicken breast", "quantity": "250g", "estimated_cost": 100.00},
+            {"item": "Mixed greens", "quantity": "100g", "estimated_cost": 30.00},
+            {"item": "Tomato", "quantity": "2 units", "estimated_cost": 10.00},
+            {"item": "Cucumber", "quantity": "1 unit", "estimated_cost": 10.00},
+            {"item": "Pasta", "quantity": "200g", "estimated_cost": 40.00},
+            {"item": "Tomato sauce", "quantity": "1 cup", "estimated_cost": 30.00},
+            {"item": "Garlic", "quantity": "3 cloves", "estimated_cost": 5.00},
+            {"item": "Parmesan", "quantity": "50g", "estimated_cost": 60.00}
+        ],
+        "estimated_cost": 400.00,
         "budget_feasible": True
     }
     return jsonify(example), 200
